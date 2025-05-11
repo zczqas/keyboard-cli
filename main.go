@@ -25,7 +25,9 @@ var keyboard = [][]keyDef{
 }
 
 type model struct {
-	pressedKeys map[string]time.Time
+	pressedKeys  map[string]time.Time
+	typedStrokes []string
+	maxStrokes   int
 }
 
 type tickMsg struct{}
@@ -47,14 +49,33 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		var k string
+		var displayKey string
+
 		switch msg.Type {
 		case tea.KeySpace:
 			k = "SPACE"
+			displayKey = " "
+		case tea.KeyBackspace:
+			k = "BACKSPACE"
+			if len(m.typedStrokes) > 0 {
+				m.typedStrokes = m.typedStrokes[:len(m.typedStrokes)-1]
+			}
+		case tea.KeyEnter:
+			k = "ENTER"
+			displayKey = "\n"
 		default:
 			k = strings.ToUpper(msg.String())
+			displayKey = msg.String()
 		}
 
 		m.pressedKeys[k] = time.Now()
+
+		if msg.Type != tea.KeyBackspace && msg.Type != tea.KeyEsc && msg.Type != tea.KeyCtrlC {
+			m.typedStrokes = append(m.typedStrokes, displayKey)
+			if len(m.typedStrokes) > m.maxStrokes {
+				m.typedStrokes = m.typedStrokes[1:]
+			}
+		}
 		return m, nil
 	case tickMsg:
 		now := time.Now()
@@ -107,12 +128,24 @@ func (m model) View() string {
 	}
 	b.WriteString("\n" + spaceStyle.Render(space) + "\n\n")
 
+	typedText := strings.Join(m.typedStrokes, "")
+	b.WriteString(lipgloss.NewStyle().
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("63")).
+		Padding(1, 2).
+		Width(50).
+		Render("Typed: "+typedText) + "\n\n")
+
 	b.WriteString("Press ESC or Ctrl+C to exit.\n")
 	return b.String()
 }
 
 func main() {
-	m := model{pressedKeys: make(map[string]time.Time)}
+	m := model{
+		pressedKeys:  make(map[string]time.Time),
+		typedStrokes: []string{},
+		maxStrokes:   100,
+	}
 
 	p := tea.NewProgram(
 		m,
