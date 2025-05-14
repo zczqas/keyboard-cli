@@ -48,8 +48,8 @@ deps:
 
 # Run the application
 run:
-	$(GOBUILD) -ldflags="$(LDFLAGS)" -o $(BINARY_NAME) $(CMD_DIR)
-	./$(BINARY_NAME)
+	$(GOBUILD) -ldflags="$(LDFLAGS)" -o $(BIN_DIR) $(CMD_DIR)
+	./$(BIN_DIR)
 
 # Lint the project
 lint:
